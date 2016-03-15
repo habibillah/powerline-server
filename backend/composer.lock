@@ -4462,29 +4462,6 @@
         },
         {
             "name": "zendframework/zend-code",
-<<<<<<< HEAD
-            "version": "3.0.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/zendframework/zend-code.git",
-                "reference": "09405eb04b7199733219cbf1f0803883a7bab842"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/zendframework/zend-code/zipball/09405eb04b7199733219cbf1f0803883a7bab842",
-                "reference": "09405eb04b7199733219cbf1f0803883a7bab842",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^5.5 || ^7.0",
-                "zendframework/zend-eventmanager": "^2.6 || ^3.0"
-            },
-            "require-dev": {
-                "doctrine/annotations": "~1.0",
-                "ext-phar": "*",
-                "phpunit/phpunit": "^4.8.21",
-                "squizlabs/php_codesniffer": "^2.5",
-=======
             "version": "2.6.2",
             "source": {
                 "type": "git",
@@ -4505,7 +4482,6 @@
                 "doctrine/annotations": "~1.0",
                 "fabpot/php-cs-fixer": "1.7.*",
                 "phpunit/phpunit": "~4.0",
->>>>>>> 790a703... Upgrade composer dependencies for support php 5.6
                 "zendframework/zend-stdlib": "~2.7"
             },
             "suggest": {
@@ -4515,13 +4491,8 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-<<<<<<< HEAD
-                    "dev-master": "3.0-dev",
-                    "dev-develop": "3.1-dev"
-=======
                     "dev-master": "2.6-dev",
                     "dev-develop": "2.7-dev"
->>>>>>> 790a703... Upgrade composer dependencies for support php 5.6
                 }
             },
             "autoload": {
@@ -4539,11 +4510,7 @@
                 "code",
                 "zf2"
             ],
-<<<<<<< HEAD
-            "time": "2016-01-26 17:57:25"
-=======
             "time": "2016-01-05 05:58:37"
->>>>>>> 790a703... Upgrade composer dependencies for support php 5.6
         },
         {
             "name": "zendframework/zend-eventmanager",
