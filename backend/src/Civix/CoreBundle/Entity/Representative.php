@@ -312,6 +312,14 @@ class Representative implements UserInterface, \Serializable, CheckingLimits, Cr
      */
     private $localGroup;
 
+    /**
+     * @var string
+     * @Serializer\Expose()
+     * @Serializer\Groups({"api-session"})
+     * @ORM\Column(name="token", type="string", length=255, nullable=true)
+     */
+    private $token;
+    
     public function __construct()
     {
         $this->setCountry('US');
@@ -1258,5 +1266,48 @@ class Representative implements UserInterface, \Serializable, CheckingLimits, Cr
             'postal_code' => '',
             'country_code' => 'US',
         ];
+    }
+    
+
+    /**
+     * Set token.
+     *
+     * @param string $token
+     *
+     * @return User
+     */
+    public function setToken($token)
+    {
+    	$this->token = $token;
+    
+    	return $this;
+    }
+    
+    /**
+     * Get token.
+     *
+     * @return string
+     */
+    public function getToken()
+    {
+    	return $this->token;
+    }
+    
+    public function generateToken()
+    {
+    	$bytes = false;
+    	if (function_exists('openssl_random_pseudo_bytes') && 0 !== stripos(PHP_OS, 'win')) {
+    		$bytes = openssl_random_pseudo_bytes(32, $strong);
+    
+    		if (true !== $strong) {
+    			$bytes = false;
+    		}
+    	}
+    
+    	if (false === $bytes) {
+    		$bytes = hash('sha256', uniqid(mt_rand(), true), true);
+    	}
+    
+    	$this->setToken(base_convert(bin2hex($bytes), 16, 36).$this->getId());
     }
 }
