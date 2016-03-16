@@ -21,6 +21,13 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 class SecureController extends BaseController
 {
+	private function checkEntity($entity = NULL, $username = NULL)
+	{
+		$em = $this->getDoctrine()->getManager();
+		
+		return $em->getRepository('CivixCoreBundle:' . $entity)->findOneBy(array('username' => $username));
+	}
+	
     /**
      * @Route("/login", name="api_secure_login")
      * @Method("POST")
@@ -41,15 +48,29 @@ class SecureController extends BaseController
      */
     public function indexAction(Request $request)
     {
-        $em = $this->getDoctrine()->getManager();
-        $user = $em->getRepository('CivixCoreBundle:User')->findOneBy(array(
-            'username' => $request->get('username'),
-        ));
+    	$em = $this->getDoctrine()->getManager();
+    	
+        // Chain of authentication (left entity has priority over right entity)
+        $entities = array('User', 'Group', 'Representative', 'Superuser');
 
-        if (!$user) {
+        foreach($entities as $entity)
+        {
+        	$user = $this->checkEntity($entity, $request->get('username'));
+        	
+        	// As far a entity is detected, stop the checks 
+        	// @todo resolve conflicts naming with users, groups, etc with same name (maybe type param?)
+        	if($user)
+        	{
+        		break;
+        	}
+        }
+        
+        // If still didn't get a entity, it is a failed authentication
+        if (!$user) 
+        {
             throw new HttpException(400, 'Authentication failed.');
         }
-
+        
         $encoder = $this->get('security.encoder_factory')->getEncoder($user);
         $password = $encoder->encodePassword($request->get('password'), $user->getSalt());
 
