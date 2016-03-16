@@ -12,6 +12,7 @@ use Civix\CoreBundle\Serializer\Type\Avatar;
  *
  * @ORM\Table(name="superusers")
  * @ORM\Entity()
+ *  
  * @UniqueEntity(fields={"username"}, groups={"registration"})
  */
 class Superuser implements UserInterface
@@ -85,6 +86,14 @@ class Superuser implements UserInterface
      */
     private $officialTitle = 'The Global Forum';
 
+    /**
+     * @var string
+     * @Serializer\Expose()
+     * @Serializer\Groups({"api-session"})
+     * @ORM\Column(name="token", type="string", length=255, nullable=true)
+     */
+    private $token;
+    
     public function __construct()
     {
         $this->salt = base_convert(sha1(uniqid(mt_rand(), true)), 16, 36);
@@ -256,5 +265,47 @@ class Superuser implements UserInterface
     public function getType()
     {
         return 'superuser';
+    }
+    
+    /**
+     * Set token.
+     *
+     * @param string $token
+     *
+     * @return User
+     */
+    public function setToken($token)
+    {
+    	$this->token = $token;
+    
+    	return $this;
+    }
+    
+    /**
+     * Get token.
+     *
+     * @return string
+     */
+    public function getToken()
+    {
+    	return $this->token;
+    }
+    
+    public function generateToken()
+    {
+    	$bytes = false;
+    	if (function_exists('openssl_random_pseudo_bytes') && 0 !== stripos(PHP_OS, 'win')) {
+    		$bytes = openssl_random_pseudo_bytes(32, $strong);
+    
+    		if (true !== $strong) {
+    			$bytes = false;
+    		}
+    	}
+    
+    	if (false === $bytes) {
+    		$bytes = hash('sha256', uniqid(mt_rand(), true), true);
+    	}
+    
+    	$this->setToken(base_convert(bin2hex($bytes), 16, 36).$this->getId());
     }
 }
