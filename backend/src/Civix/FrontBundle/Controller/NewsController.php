@@ -2,6 +2,9 @@
 
 namespace Civix\FrontBundle\Controller;
 
+use Civix\CoreBundle\Entity\Poll\Question\LeaderNews;
+use Civix\CoreBundle\Event\Poll\QuestionEvent;
+use Civix\CoreBundle\Event\PollEvents;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -223,6 +226,8 @@ abstract class NewsController extends Controller
         $news->setPublishedAt(new \DateTime());
         $this->getDoctrine()->getManager()->flush();
         $this->get('civix_core.activity_update')->publishLeaderNewsToActivity($news);
+        $event = new QuestionEvent($news);
+        $this->get('event_dispatcher')->dispatch(PollEvents::QUESTION_PUBLISHED, $event);
         $this->get('session')->getFlashBag()->add('notice', 'The news has been successfully published');
 
         return $this->redirect($this->generateUrl('civix_front_'.$this->getUser()->getType().'_news_index'));

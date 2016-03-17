@@ -3,6 +3,8 @@
 namespace Civix\FrontBundle\Controller;
 
 use Civix\CoreBundle\Entity\Poll\Answer;
+use Civix\CoreBundle\Event\Poll\QuestionEvent;
+use Civix\CoreBundle\Event\PollEvents;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -235,6 +237,8 @@ abstract class PaymentRequestController extends Controller
         $this->getDoctrine()->getManager()->flush($ignore);
 
         $this->get('civix_core.activity_update')->publishPaymentRequestToActivity($paymentRequest);
+        $event = new QuestionEvent($paymentRequest);
+        $this->get('event_dispatcher')->dispatch(PollEvents::QUESTION_PUBLISHED, $event);
         $this->get('session')->getFlashBag()->add('notice', 'The payment request has been successfully published');
         $this->getDoctrine()
             ->getRepository('CivixCoreBundle:HashTag')->addForQuestion($paymentRequest);
@@ -283,6 +287,8 @@ abstract class PaymentRequestController extends Controller
                 $this->getDoctrine()->getManager()->flush($ignore);
 
                 $this->get('civix_core.activity_update')->publishPaymentRequestToActivity($paymentRequest, $users);
+                $event = new QuestionEvent($paymentRequest);
+                $this->get('event_dispatcher')->dispatch(PollEvents::QUESTION_PUBLISHED, $event);
 
                 if ($paymentRequest->getIsAllowOutsiders()) {
                     /* @var User $user */

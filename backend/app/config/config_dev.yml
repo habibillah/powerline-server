@@ -4,6 +4,8 @@ imports:
 framework:
     router:   { resource: "%kernel.root_dir%/config/routing_dev.yml" }
     profiler: { only_exceptions: false }
+    session:
+        save_path: /dev/shm/powerline/%kernel.environment%
 
 web_profiler:
     toolbar: true
@@ -15,6 +17,7 @@ monolog:
             type:  stream
             path:  %kernel.logs_dir%/%kernel.environment%.log
             level: debug
+            channels: [!event]
         firephp:
             type:  firephp
             level: info

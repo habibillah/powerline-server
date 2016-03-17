@@ -31,8 +31,10 @@ use Symfony\Component\Validator\ValidatorInterface;
 
 class ActivityUpdate
 {
+    /**
+     * @var EntityManager
+     */
     protected $entityManager;
-    protected $pushSender;
     /**
      * @var ValidatorInterface
      */
@@ -41,13 +43,19 @@ class ActivityUpdate
      * @var Settings
      */
     private $settings;
+    /**
+     * @var Poll\CommentManager
+     */
     private $cm;
 
-    public function __construct(EntityManager $entityManager, PushTask $pushSender,
-                                $validator, Settings $settings, Poll\CommentManager $cm)
+    public function __construct(
+        EntityManager $entityManager,
+        ValidatorInterface $validator,
+        Settings $settings,
+        Poll\CommentManager $cm
+    )
     {
         $this->entityManager = $entityManager;
-        $this->pushSender = $pushSender;
         $this->validator = $validator;
         $this->settings = $settings;
         $this->cm = $cm;
@@ -78,13 +86,6 @@ class ActivityUpdate
         $this->setImage($activity, $question);
 
         $this->cm->addPollRootComment($question, $question->getSubject());
-
-        //send push notifications
-        $this->pushSender->addToQueue('sendPushPublishQuestion', [
-            $question->getId(),
-            "{$question->getUser()->getOfficialName()} Poll",
-            $question->getSubject()
-        ]);
 
         $this->entityManager->persist($activity);
         $this->entityManager->flush();
@@ -129,12 +130,6 @@ class ActivityUpdate
 
         $this->createActivityConditionsForMicroPetition($activity, $petition);
 
-        if ($isPublic) {
-            $this->pushSender->addToQueue(
-                'sendGroupPetitionPush',
-                [$petition->getGroup()->getId(), $petition->getId()]);
-        }
-
         return true;
     }
 
@@ -156,14 +151,6 @@ class ActivityUpdate
         $this->setImage($activity, $news);
 
         $this->cm->addPollRootComment($news, $news->getSubject());
-
-        $this->pushSender->addToQueue(
-            'sendPushPublishQuestion',
-            [
-                $news->getId(),
-                "Discuss: {$this->preview($news->getSubject())}",
-            ]
-        );
 
         $this->entityManager->persist($activity);
         $this->entityManager->flush();
@@ -190,13 +177,6 @@ class ActivityUpdate
         $this->setImage($activity, $petition);
 
         $this->cm->addPollRootComment($petition, $petition->getPetitionBody());
-
-        //send push notifications
-        $this->pushSender->addToQueue('sendPushPublishQuestion', array(
-            $petition->getId(),
-            "Sign: {$petition->getPetitionTitle()}",
-            "Sign: {$petition->getPetitionBody()}",
-        ));
 
         $this->entityManager->persist($activity);
         $this->entityManager->flush();
@@ -237,15 +217,6 @@ class ActivityUpdate
             $this->createActivityConditionsForQuestion($activity, $paymentRequest);
         }
 
-        $this->pushSender->addToQueue(
-            'sendPushPublishQuestion',
-            [
-                $paymentRequest->getId(),
-                "{$paymentRequest->getUser()->getOfficialName()} Fundraiser",
-                $paymentRequest->getTitle()
-            ]
-        );
-
         return $activity;
     }
 
@@ -268,16 +239,6 @@ class ActivityUpdate
         $this->setImage($activity, $event);
 
         $this->cm->addPollRootComment($event, $event->getSubject());
-
-        //send push notifications
-        $this->pushSender->addToQueue(
-            'sendPushPublishQuestion',
-            [
-                $event->getId(),
-                "{$event->getUser()->getOfficialName()} Event",
-                "RSVP: {$event->getTitle()}"
-            ]
-        );
 
         $this->entityManager->persist($activity);
         $this->entityManager->flush();
@@ -311,7 +272,8 @@ class ActivityUpdate
                 $petition->getGroup()
             );
             $socialActivity->setRecipient($petition->getUser());
-            $this->pushSender->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
+            $this->entityManager->persist($socialActivity);
+            $this->entityManager->flush();
         }
     }
 
@@ -428,14 +390,5 @@ class ActivityUpdate
         $className = explode('\\', get_class($object));
 
         return $className[count($className) - 1];
-    }
-
-    private function preview($text)
-    {
-        if (mb_strlen($text) > 50) {
-            return mb_substr($text, 0, 50).'...';
-        }
-
-        return $text;
     }
 }

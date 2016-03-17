@@ -2,6 +2,9 @@
 
 namespace Civix\FrontBundle\Controller\Superuser;
 
+use Civix\CoreBundle\Event\GroupEvent;
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\CoreBundle\Exception\MailgunException;
 use Cocur\Slugify\Slugify;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
@@ -71,16 +74,14 @@ class GroupController extends Controller
         $csrfProvider = $this->get('form.csrf_provider');
 
         if ($csrfProvider->isCsrfTokenValid('remove_group_'.$group->getId(), $this->getRequest()->get('_token'))) {
-            $slugify = new Slugify();
-
-            $groupName = $slugify->slugify($group->getOfficialName(), '');
-
-            $mailgun = $this->get('civix_core.mailgun')->listremoveAction($groupName);
-
-            if ($mailgun['http_response_code'] != 200) {
+            $event = new GroupEvent($group);
+            try {
+                $this->get('event_dispatcher')
+                    ->dispatch(GroupEvents::BEFORE_DELETE, $event);
+            } catch (MailgunException $e) {
                 $this->get('session')->getFlashBag()->add('error', 'Something went wrong removing the group from mailgun');
 
-                return $this->redirect($this->generateUrl('civix_front_superuser_manage_groups'));
+                return $this->redirect($this->generateUrl('civix_front_superuser_manage_groups'));   
             }
 
             try {

@@ -3,11 +3,14 @@
 namespace Civix\CoreBundle\Service;
 
 use Civix\CoreBundle\Entity\Invites\UserToGroup;
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\CoreBundle\Event\GroupUserEvent;
 use Civix\CoreBundle\Service\Mailgun\MailgunApi;
 use Civix\CoreBundle\Entity\DeferredInvites;
 use Civix\CoreBundle\Entity\Group;
 use Civix\CoreBundle\Entity\User;
 use Cocur\Slugify\Slugify;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class InviteSender
 {
@@ -17,17 +20,23 @@ class InviteSender
     private $entityManager;
     private $from;
     private $mailgun;
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
 
     public function __construct(
         EmailSender $emailSender,
         PushTask $pushTask,
         \Doctrine\ORM\EntityManager $entityManager,
-        MailgunApi $mailgunApi
+        MailgunApi $mailgunApi,
+        EventDispatcherInterface $dispatcher
     ) {
         $this->emailSender = $emailSender;
         $this->entityManager = $entityManager;
         $this->pushTask = $pushTask;
         $this->mailgun = $mailgunApi;
+        $this->dispatcher = $dispatcher;
     }
 
     public function send(array $invites, Group $group)
@@ -61,14 +70,11 @@ class InviteSender
         $usersEmails = array();
         $invites = array();
 
-        $slugify = new Slugify();
-
-        $groupName = $slugify->slugify($group->getOfficialName(), '');
-
         /** @var $user \Civix\CoreBundle\Entity\User */
         foreach ($users as $user) {
             if (!$group->getInvites()->contains($user) && !$group->getUsers()->contains($user)) {
-                $this->mailgun->listaddmemberAction($groupName, $user->getEmail(), $user->getUsername());
+                $event = new GroupUserEvent($group, $user);
+                $this->dispatcher->dispatch(GroupEvents::USER_JOINED, $event);
                 $user->addInvite($group);
                 $invites[] = $user;
                 $usersEmails[] = $user->getEmail();

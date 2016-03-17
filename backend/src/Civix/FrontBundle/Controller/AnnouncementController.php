@@ -2,6 +2,8 @@
 
 namespace Civix\FrontBundle\Controller;
 
+use Civix\CoreBundle\Event\AnnouncementEvent;
+use Civix\CoreBundle\Event\AnnouncementEvents;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
@@ -15,8 +17,6 @@ use Civix\CoreBundle\Entity\Announcement;
 abstract class AnnouncementController extends Controller
 {
     abstract protected function getAnnouncementClass();
-
-    abstract protected function getSendPushMethodName();
 
     /**
      * @Route("")
@@ -157,10 +157,8 @@ abstract class AnnouncementController extends Controller
         if ($packLimitState->isAllowedWith()) {
             $announcement->setPublishedAt(new \DateTime());
             $this->getDoctrine()->getManager()->flush();
-            $this->get('civix_core.push_task')->addToQueue(
-                $this->getSendPushMethodName(),
-                [$announcement->getUser()->getId(), $announcement->getContent()]
-            );
+            $event = new AnnouncementEvent($announcement);
+            $this->get('event_dispatcher')->dispatch(AnnouncementEvents::PUBLISHED, $event);
             $this->get('session')->getFlashBag()->add('success', 'Announcement has been successfully published');
         } else {
             $this->get('session')->getFlashBag()->add('danger', 'Announcements\' limit has been exceeded');

@@ -8,127 +8,119 @@
 namespace Civix\CoreBundle\Service\Mailgun;
 
 use Mailgun\Mailgun;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Psr\Log\LoggerInterface;
 
 class MailgunApi
 {
-    public $APIURL = 'api.mailgun.net';
-    public $GROUPEMAIL = '@powerlinegroups.com';
+    const GROUP_EMAIL = '@powerlinegroups.com';
 
-    public $public_key;
-    public $private_key;
-    public $container;
+    /**
+     * @var Mailgun
+     */
+    private $client;
+    /**
+     * @var Mailgun
+     */
+    private $publicClient;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
-    public function __construct($public_key, $private_key, ContainerInterface $container)
+    public function __construct(
+        Mailgun $client,
+        Mailgun $publicClient,
+        LoggerInterface $logger
+    )
     {
-        $this->public_key = $public_key;
-        $this->private_key = $private_key;
-        $this->container = $container;
+        $this->client = $client;
+        $this->publicClient = $publicClient;
+        $this->logger = $logger;
     }
 
-    public function listcreateAction($listname, $description, $email, $name)
+    public function listCreateAction($listname, $description)
     {
-        $mailgun = new Mailgun($this->private_key, $this->APIURL, 'v3', true);
-        $publicmailgun = new Mailgun($this->public_key, $this->APIURL, 'v3', true);
-
-        $validation = $publicmailgun->get('address/validate', array('address' => $listname.$this->GROUPEMAIL));
+        $validation = $this->publicClient->get('address/validate', array(
+            'address' => $listname.self::GROUP_EMAIL
+        ));
         $validationresponse = json_decode(json_encode($validation), true);
 
-        if ($validationresponse['http_response_code'] == 200 and $validationresponse['http_response_body']['is_valid'] === false) {
+        if ($validationresponse['http_response_code'] == 200
+            && $validationresponse['http_response_body']['is_valid'] === false
+        ) {
             return $validationresponse;
         }
-        $result = $mailgun->post('lists', array(
-            'address' => $listname.$this->GROUPEMAIL,
-            'description' => ''.$description,
+
+        $result = $this->client->post('lists', array(
+            'address' => $listname.self::GROUP_EMAIL,
+            'description' => $description,
             'access_level' => 'members',
         ));
 
-        $result = $this->JsonResponse($result);
-
-        if ($result['http_response_code'] == 200) {
-            $this->listaddmemberAction($listname, $email, $name);
-        }
-
-        return $result;
+        return $this->JsonResponse($result);
     }
 
-    public function listaddmemberAction($listname, $address, $name)
+    public function listAddMemberAction($listname, $address, $name)
     {
-        $logger = $this->container->get('logger');
+        $listAddress = $listname.self::GROUP_EMAIL;
 
-        $mailgun = new Mailgun($this->private_key, $this->APIURL, 'v3', true);
-
-        $listAddress = $listname.$this->GROUPEMAIL;
-
-        $checkresult = $mailgun->get('lists', array(
-            'address' => ''.$listAddress,
-        ));
-        $decodedresult = json_decode(json_encode($checkresult), true);
-        $count = $decodedresult['http_response_body']['total_count'];
-
-        $logger->info('Testing adding member '.$address);
-        if ($decodedresult['http_response_code'] != 200) {
-            $result = $this->listcreateAction($listname, ' the list '.$listname, $address, $name);
-            $logger->info('adding list '.$address.' '.serialize($result));
-        }
-        $result = $mailgun->post("lists/$listAddress/members", array(
-                'address' => ''.$address,
-                'name' => ''.$name,
+        $this->logger->info('Testing adding member '.$address);
+        $result = $this->client->post("lists/$listAddress/members", array(
+                'address' => $address,
+                'name' => $name,
                 'subscribed' => true,
                 'upsert' => true,
             ));
 
-        $logger->info('adding member '.$address.' '.serialize($result));
+        $this->logger->info('adding member '.$address.' '.serialize($result));
 
         return $this->JsonResponse($result);
     }
 
-    public function listremovememberAction($listname, $address)
+    public function listRemoveMemberAction($listname, $address)
     {
-        $mailgun = new Mailgun($this->private_key, $this->APIURL, 'v3', true);
+        $listAddress = $listname.self::GROUP_EMAIL;
+        $listMember = $address;
 
-        $listAddress = $listname.$this->GROUPEMAIL;
-        $listMember = ''.$address;
-
-        $checkresult = $mailgun->get('lists', array(
-            'address' => ''.$listAddress,
-        ));
-        $decodedresult = json_decode(json_encode($checkresult), true);
-        $count = $decodedresult['http_response_body']['total_count'];
-
-        if ($count == 0) {
-            $result = $this->listcreateAction($listname, ' the list '.$listname, $address, ' ');
-
-            if ($result['http_response_code'] != 200) {
-                return $this->JsonResponse($result);
-            }
-        }
-
-        $checkadress = $mailgun->get("lists/$listAddress/members", array(
-            'address' => ''.$address,
-        ));
-
-        $decodedresult = json_decode(json_encode($checkadress), true);
-        $count = $decodedresult['http_response_body']['total_count'];
-
-        if ($count > 0) {
-            $result = $mailgun->delete("lists/$listAddress/members/$listMember");
-        } else {
-            $result = $this->listcreateAction($listname, 'new list '.$listname, $address, ' ');
-        }
+        $result = $this->client->delete("lists/$listAddress/members/$listMember");
 
         return $this->JsonResponse($result);
     }
 
-    public function listremoveAction($listname)
+    public function listRemoveAction($listname)
     {
-        $mailgun = new Mailgun($this->private_key, $this->APIURL, 'v3', true);
+        $listAddress = $listname.self::GROUP_EMAIL;
 
-        $listAddress = $listname.$this->GROUPEMAIL;
-
-        $result = $mailgun->delete("lists/$listAddress");
+        $result = $this->client->delete("lists/$listAddress");
 
         return $this->JsonResponse($result);
+    }
+
+    public function listAddMembersAction($listname, array $users)
+    {
+        $listAddress = $listname.self::GROUP_EMAIL;
+
+        $this->logger->info('Testing adding members '.implode(', ', $users));
+        $result = $this->client->post("lists/$listAddress/members.json", array(
+            'members' => json_encode($users),
+            'upsert' => true,
+        ));
+
+        $this->logger->info('adding members '.implode(', ', $users).' '.serialize($result));
+
+        return $this->JsonResponse($result);
+    }
+
+    public function listExistsAction($listname)
+    {
+        $listAddress = $listname.self::GROUP_EMAIL;
+        $result = $this->client->get('lists', array(
+            'address' => $listAddress,
+        ));
+
+        $decodedresult = $this->JsonResponse($result);
+
+        return (bool)$decodedresult['http_response_body']['total_count'];
     }
 
     public function JsonResponse($result)

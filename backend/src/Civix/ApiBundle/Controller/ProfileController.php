@@ -2,6 +2,8 @@
 
 namespace Civix\ApiBundle\Controller;
 
+use Civix\CoreBundle\Event\UserEvents;
+use Civix\CoreBundle\Event\UserFollowEvent;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
@@ -97,6 +99,8 @@ class ProfileController extends BaseController
             $entityManager->flush();
             if ('follow' === $status) {
                 $this->get('civix_core.social_activity_manager')->sendUserFollowRequest($follow);
+                $event = new UserFollowEvent($follow);
+                $this->get('event_dispatcher')->dispatch(UserEvents::FOLLOWED, $event);
             }
             $response->setContent(json_encode(array('success' => 'ok')));
         } else {

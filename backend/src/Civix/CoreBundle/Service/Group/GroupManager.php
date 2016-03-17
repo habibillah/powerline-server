@@ -2,12 +2,15 @@
 
 namespace Civix\CoreBundle\Service\Group;
 
-use Civix\CoreBundle\Entity\User;
 use Civix\CoreBundle\Entity\Group;
-use Civix\CoreBundle\Entity\UserGroup;
 use Civix\CoreBundle\Entity\Invites\UserToGroup;
-use Doctrine\ORM\EntityManager;
+use Civix\CoreBundle\Entity\User;
+use Civix\CoreBundle\Entity\UserGroup;
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\CoreBundle\Event\GroupUserEvent;
 use Civix\CoreBundle\Service\Google\Geocode;
+use Doctrine\ORM\EntityManager;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class GroupManager
 {
@@ -21,6 +24,11 @@ class GroupManager
      */
     private $geocode;
 
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
+    
     private $permissionPriority = [
         'permissions_name',
         'permissions_address',
@@ -33,10 +41,15 @@ class GroupManager
         'permissions_responses'
     ];
 
-    public function __construct(EntityManager $entityManager, Geocode $geocode)
+    public function __construct(
+        EntityManager $entityManager, 
+        Geocode $geocode,
+        EventDispatcherInterface $dispatcher
+    )
     {
         $this->entityManager = $entityManager;
         $this->geocode = $geocode;
+        $this->dispatcher = $dispatcher;
     }
 
     public function joinToGroup(User $user, Group $group)
@@ -66,11 +79,17 @@ class GroupManager
         $this->entityManager->persist($userGroup);
         $this->entityManager->flush($userGroup);
 
+        $event = new GroupUserEvent($group, $user);
+        $this->dispatcher->dispatch(GroupEvents::USER_JOINED, $event);
+
         return $user;
     }
 
     public function unjoinGroup(User $user, Group $group)
     {
+        $event = new GroupUserEvent($group, $user);
+        $this->dispatcher->dispatch(GroupEvents::USER_BEFORE_UNJOIN, $event);
+        
         $this->entityManager->createQueryBuilder()
             ->delete(UserGroup::class, 'ug')
             ->where('ug.group = :group AND ug.user = :user')
@@ -126,7 +145,9 @@ class GroupManager
         $this->joinToGroup($user, $countryGroup);
 
         $parentCountryGroup = $countryGroup->getParent();
-        if (!is_null($parentCountryGroup) && $parentCountryGroup->getLocationName() == Group::GROUP_LOCATION_NAME_EROPEAN_UNION) {
+        if (!is_null($parentCountryGroup) &&
+            ($parentCountryGroup->getLocationName() == Group::GROUP_LOCATION_NAME_EROPEAN_UNION
+                || $parentCountryGroup->getLocationName() == Group::GROUP_LOCATION_NAME_AFRICAN_UNION)) {
             $this->joinToGroup($user, $parentCountryGroup);
         }
 

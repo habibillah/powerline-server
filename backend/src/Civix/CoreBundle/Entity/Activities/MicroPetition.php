@@ -2,6 +2,8 @@
 
 namespace Civix\CoreBundle\Entity\Activities;
 
+use Civix\CoreBundle\Entity\Micropetitions\Metadata;
+use Civix\CoreBundle\Entity\Micropetitions\Petition;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 use Civix\CoreBundle\Entity\Activity;
@@ -27,6 +29,12 @@ class MicroPetition extends Activity
      */
     protected $quorum;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="Civix\CoreBundle\Entity\Micropetitions\Petition", inversedBy="micropetitions")
+     * @var Petition
+     */
+    protected $petition;
+
     public function setPetitionId($id)
     {
         $this->petitionId = $id;
@@ -37,6 +45,39 @@ class MicroPetition extends Activity
     public function getPetitionId()
     {
         return $this->petitionId;
+    }
+
+    /**
+     * @return Petition
+     */
+    public function getPetition()
+    {
+        return $this->petition;
+    }
+
+    /**
+     * @param Petition $petition
+     * @return MicroPetition
+     */
+    public function setPetition($petition)
+    {
+        $this->petition = $petition;
+
+        return $this;
+    }
+
+    /**
+     * @Serializer\VirtualProperty()
+     * @Serializer\Groups({"api-activities"})
+     * @return null|Metadata
+     */
+    public function getMetadata()
+    {
+        if ($this->petition) {
+            return $this->petition->getMetadata();
+        }
+
+        return null;
     }
 
     public function getEntity()
