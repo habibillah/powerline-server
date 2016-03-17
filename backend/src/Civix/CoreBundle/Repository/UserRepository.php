@@ -518,4 +518,23 @@ class UserRepository extends EntityRepository
 
         return $query->getQuery()->getResult();
     }
+
+    /**
+     * Returns users [{name, address}, ...]
+     * 
+     * @param $groupId
+     * @return array
+     */
+    public function getUsersEmailsByGroup($groupId)
+    {
+        $query = $this->createQueryBuilder('u');
+        $query
+            ->select('u.firstName, u.lastName, u.email')
+            ->innerJoin('u.groups', 'gr')
+            ->orderBy('u.id', 'ASC')
+            ->where('gr.group = :groupId')
+            ->setParameter('groupId', $groupId);
+        
+        return $query->getQuery()->getResult();
+    }
 }

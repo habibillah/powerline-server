@@ -2,17 +2,18 @@
 
 namespace Civix\FrontBundle\Controller;
 
-use Cocur\Slugify\Slugify;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\Security\Core\SecurityContext;
+use Civix\CoreBundle\Entity\Group;
+use Civix\CoreBundle\Event\GroupEvent;
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\FrontBundle\Form\Type\CropImage;
+use Civix\FrontBundle\Form\Type\Group\Avatar;
+use Civix\FrontBundle\Form\Type\Group\Profile;
+use Civix\FrontBundle\Form\Type\Group\Registration;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
-use Civix\CoreBundle\Entity\Group;
-use Civix\FrontBundle\Form\Type\CropImage;
-use Civix\FrontBundle\Form\Type\Group\Registration;
-use Civix\FrontBundle\Form\Type\Group\Profile;
-use Civix\FrontBundle\Form\Type\Group\Avatar;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\Security\Core\SecurityContext;
 use Symfony\Component\Validator\Constraints\All;
 use Symfony\Component\Validator\Constraints\Email;
 
@@ -54,20 +55,13 @@ class GroupController extends Controller
                 $encodedPassword = $encoder->encodePassword($password, $group->getSalt());
                 $group->setPassword($encodedPassword);
 
-                $slugify = new Slugify();
-
-                $groupName = $slugify->slugify($group->getOfficialName(), '');
-
-                $mailgun = $this->get('civix_core.mailgun')->listcreateAction($groupName, $group->getOfficialDescription(), $group->getManagerEmail(), $group->getManagerFirstName().' '.$group->getManagerLastName());
-
-                if ($mailgun['http_response_code'] != 200) {
-                    return $this->render('CivixFrontBundle:Group:error.html.twig');
-                }
-
                 /** @var $entityManager \Doctrine\ORM\EntityManager */
                 $entityManager = $this->getDoctrine()->getManager();
                 $entityManager->persist($group);
                 $entityManager->flush();
+
+                $event = new GroupEvent($group);
+                $this->get('event_dispatcher')->dispatch(GroupEvents::CREATED, $event);
 
                 //send notification
                 $this->get('civix_core.email_sender')

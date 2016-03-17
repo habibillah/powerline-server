@@ -2,18 +2,20 @@
 
 namespace Civix\FrontBundle\Controller;
 
+use Civix\CoreBundle\Entity\Activity;
+use Civix\CoreBundle\Entity\Poll\Question;
+use Civix\CoreBundle\Event\Poll\QuestionEvent;
+use Civix\CoreBundle\Event\PollEvents;
+use Civix\CoreBundle\Model\Group\GroupSectionInterface;
+use Civix\CoreBundle\Service\Settings;
+use Civix\FrontBundle\Form\Model\Question as QuestionModel;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-use Civix\FrontBundle\Form\Model\Question as QuestionModel;
-use Civix\CoreBundle\Entity\Poll\Question;
-use Civix\CoreBundle\Entity\Activity;
-use Civix\CoreBundle\Model\Group\GroupSectionInterface;
-use Civix\CoreBundle\Service\Settings;
 
 abstract class QuestionController extends Controller
 {
@@ -248,6 +250,9 @@ abstract class QuestionController extends Controller
 
             $result = $this->get('civix_core.activity_update')->publishQuestionToActivity($question);
 
+            $event = new QuestionEvent($question);
+            $this->get('event_dispatcher')->dispatch(PollEvents::QUESTION_PUBLISHED, $event);
+            
             if ($result instanceof Activity) {
                 $this->get('session')->getFlashBag()->add('notice', 'Question has been successfully published');
             } else {

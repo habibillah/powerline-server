@@ -2,6 +2,9 @@
 
 namespace Civix\FrontBundle\Controller\Group;
 
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\CoreBundle\Event\GroupUserEvent;
+use Civix\CoreBundle\Exception\MailgunException;
 use Cocur\Slugify\Slugify;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
@@ -66,20 +69,14 @@ class MemberController extends Controller
         if ($csrfProvider->isCsrfTokenValid(
             'remove_members_'.$user->getId(), $this->getRequest()->get('_token')
         )) {
-            $slugify = new Slugify();
-
-            $groupName = $slugify->slugify($this->getUser()->getOfficialName(), '');
-
-            $mailgun = $this->get('civix_core.mailgun')->listremovememberAction($groupName, $this->getUser()->getEmail());
-
-            if ($mailgun['http_response_code'] != 200) {
+            try {
+                $this->get('civix_core.group_manager')
+                    ->unjoinGroup($user, $this->getUser());
+            } catch (MailgunException $e) {
                 $this->get('session')->getFlashBag()->add('error', 'cannot remove this user from mailgun list');
 
                 return $this->redirect($this->generateUrl('civix_front_group_members'));
             }
-            $this->get('civix_core.group_manager')
-                ->unjoinGroup($user, $this->getUser());
-
             $entityManager->persist($user);
             $entityManager->flush();
 
@@ -134,16 +131,9 @@ class MemberController extends Controller
                 ->isJoinedUser($this->getUser(), $user);
 
             if ($userGroup) {
-                $slugify = new Slugify();
-                $groupName = $slugify->slugify($userGroup->getGroup()->getOfficialName(), '');
-
-                $mailgun = $this->get('civix_core.mailgun')->listaddmemberAction($groupName, $userGroup->getUser()->getEmail(), $userGroup->getUser()->getFirstName().' '.$userGroup->getUser()->getLastName());
-
-                if ($mailgun['http_response_code'] != 200) {
-                    $this->get('session')->getFlashBag()->add('error', 'cannot add user to mailgun list');
-
-                    return $this->redirect($this->generateUrl('civix_front_group_manage_approvals'));
-                }
+                $event = new GroupUserEvent($userGroup->getGroup(), $userGroup->getUser());
+                $this->get('event_dispatcher')->dispatch(GroupEvents::USER_JOINED, $event);
+                
                 $userGroup->setStatus(UserGroup::STATUS_ACTIVE);
                 $entityManager->persist($userGroup);
                 $entityManager->flush();

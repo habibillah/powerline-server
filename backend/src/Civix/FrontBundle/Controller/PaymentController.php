@@ -2,6 +2,8 @@
 
 namespace Civix\FrontBundle\Controller;
 
+use Civix\CoreBundle\Event\Poll\QuestionEvent;
+use Civix\CoreBundle\Event\PollEvents;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -118,6 +120,8 @@ abstract class PaymentController extends Controller
                     $petition->setPublishedAt(new \DateTime());
                     $this->getDoctrine()->getManager()->flush($petition);
                     $this->get('civix_core.activity_update')->publishPetitionToActivity($petition);
+                    $event = new QuestionEvent($petition);
+                    $this->get('event_dispatcher')->dispatch(PollEvents::QUESTION_PUBLISHED, $event);
                     $this->get('session')->getFlashBag()->add('notice', 'The petition has been successfully published');
 
                     return $this->redirect(

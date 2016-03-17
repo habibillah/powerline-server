@@ -2,6 +2,8 @@
 
 namespace Civix\ApiBundle\Controller;
 
+use Civix\CoreBundle\Event\UserEvents;
+use Civix\CoreBundle\Event\UserFollowEvent;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
@@ -40,6 +42,8 @@ class FollowController extends BaseController
         ;
         $this->getDoctrine()->getRepository(UserFollow::class)->handle($follow);
         $this->get('civix_core.social_activity_manager')->sendUserFollowRequest($follow);
+        $event = new UserFollowEvent($follow);
+        $this->get('event_dispatcher')->dispatch(UserEvents::FOLLOWED, $event);
 
         return $this->createJSONResponse($this->jmsSerialization($follow, ['api-follow', 'api-info']), 201);
     }

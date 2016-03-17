@@ -2,12 +2,15 @@
 
 namespace Civix\CoreBundle\Service\Micropetitions;
 
+use Civix\CoreBundle\Event\Micropetition\PetitionEvent;
+use Civix\CoreBundle\Event\MicropetitionEvents;
 use Doctrine\ORM\EntityManager;
 use Civix\CoreBundle\Entity\Micropetitions\Petition as UserPetition;
 use Civix\CoreBundle\Entity\Micropetitions\Answer;
 use Civix\CoreBundle\Service\ActivityUpdate;
 use Civix\CoreBundle\Entity\User;
 use Civix\CoreBundle\Entity\Group;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class PetitionManager
 {
@@ -25,12 +28,21 @@ class PetitionManager
      * @var ActivityUpdate
      */
     protected $activityUpdate;
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
 
-    public function __construct(EntityManager $entityManager, ActivityUpdate $activityUpdate)
+    public function __construct(
+        EntityManager $entityManager, 
+        ActivityUpdate $activityUpdate,
+        EventDispatcherInterface $dispatcher
+    )
     {
         $this->entityManager = $entityManager;
         $this->activityUpdate = $activityUpdate;
         $this->errors = [];
+        $this->dispatcher = $dispatcher;
     }
 
     public function createPetitionInterval(UserPetition $userPetition, Group $petitionGroup, User $user, $expireInterval = self::EXPIRE_INTERVAL)
@@ -98,6 +110,8 @@ class PetitionManager
         if ($userPetition->getPublishStatus() == UserPetition::STATUS_USER) {
             if ($this->checkIfNeedPublish($userPetition)) {
                 $this->activityUpdate->publishMicroPetitionToActivity($userPetition, true);
+                $event = new PetitionEvent($userPetition);
+                $this->dispatcher->dispatch(MicropetitionEvents::PETITION_ANSWERED, $event);
             }
         }
 

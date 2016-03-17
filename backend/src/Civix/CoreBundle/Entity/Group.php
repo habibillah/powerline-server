@@ -39,7 +39,8 @@ class Group implements UserInterface, EquatableInterface, \Serializable, Checkin
     const GROUP_TYPE_LOCAL = 3;
     const GROUP_TYPE_SPECIAL = 4;
 
-    const GROUP_LOCATION_NAME_EROPEAN_UNION = 'EU';
+    const GROUP_LOCATION_NAME_EROPEAN_UNION = "EU";
+    const GROUP_LOCATION_NAME_AFRICAN_UNION = "AFU";
 
     const GROUP_MEMBERSHIP_PUBLIC = 0;
     const GROUP_MEMBERSHIP_APPROVAL = 1;
@@ -763,6 +764,16 @@ class Group implements UserInterface, EquatableInterface, \Serializable, Checkin
         $this->managerEmail = $managerEmail;
 
         return $this;
+    }
+
+    /**
+     * Get manager full name.
+     * 
+     * @return string
+     */
+    public function getManagerFullName()
+    {
+        return $this->getManagerFirstName().' '.$this->getManagerLastName();
     }
 
     /**

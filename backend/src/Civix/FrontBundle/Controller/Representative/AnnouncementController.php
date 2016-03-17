@@ -14,9 +14,4 @@ class AnnouncementController extends Controller
     {
         return '\Civix\CoreBundle\Entity\Announcement\RepresentativeAnnouncement';
     }
-
-    protected function getSendPushMethodName()
-    {
-        return 'sendRepresentativeAnnouncementPush';
-    }
 }

@@ -2,6 +2,9 @@
 
 namespace Civix\ApiBundle\Controller;
 
+use Civix\CoreBundle\Event\GroupEvents;
+use Civix\CoreBundle\Event\GroupUserEvent;
+use Civix\CoreBundle\Exception\MailgunException;
 use Cocur\Slugify\Slugify;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
@@ -54,20 +57,13 @@ class MemberController extends Controller
             return $this->createJSONResponse('The group is not found', 404);
         }
 
-        // Unsuscribe/remove the user from the mailgun list group
-        $slugify = new Slugify();
-
-        $groupName = $slugify->slugify($this->getUser()->getOfficialName(),'');
-
-        $mailgun = $this->get('civix_core.mailgun')->listremovememberAction($groupName, $this->getUser()->getEmail());
-
-        if($mailgun['http_response_code'] != 200) 
-        {
-           	return $this->createJSONResponse('cannot remove this user from mailgun list', 404);
+        try {
+            $this->get('civix_core.group_manager')
+                ->unjoinGroup($user, $this->getUser());
+        } catch (MailgunException $e) {
+            return $this->createJSONResponse('cannot remove this user from mailgun list', 404);
         }
-            
-        $this->get('civix_core.group_manager')->unjoinGroup($user, $this->getUser());
-
+        
         $entityManager->persist($user);
         $entityManager->flush();
 
@@ -106,15 +102,8 @@ class MemberController extends Controller
 
         if ($userGroup) 
         {
-        	$slugify = new Slugify();
-        	$groupName = $slugify->slugify($userGroup->getGroup()->getOfficialName(),'');
-        	
-        	$mailgun = $this->get('civix_core.mailgun')->listaddmemberAction($groupName,$userGroup->getUser()->getEmail(),$userGroup->getUser()->getFirstName().' '.$userGroup->getUser()->getLastName());
-
-        	if($mailgun['http_response_code'] != 200)
-        	{
-        		return $this->createJSONResponse('cannot remove this user from mailgun list', 404);
-        	}
+            $event = new GroupUserEvent($userGroup->getGroup(), $userGroup->getUser());
+        	$this->get('event_dispatcher')->dispatch(GroupEvents::USER_JOINED, $event);
         		
         	$userGroup->setStatus(UserGroup::STATUS_ACTIVE);
         	$entityManager->persist($userGroup);

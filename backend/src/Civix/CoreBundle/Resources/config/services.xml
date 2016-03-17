@@ -9,6 +9,7 @@
         <parameter key="ciceroapi_password">%cicero_password%</parameter>
         <parameter key="sunlightapi_token">%sunlightapi_token%</parameter>
         <parameter key="ciceroapi_class">Civix\CoreBundle\Service\CiceroCalls</parameter>
+        <parameter key="mailgun_endpoint">api.mailgun.net</parameter>
     </parameters>
     <!--
     <parameters>
@@ -25,12 +26,34 @@
     -->
 
     <services>
+        <service class="Civix\CoreBundle\Repository\UserRepository"
+                 id="civix_core.repository.user_repository"
+                 factory-service="doctrine.orm.entity_manager"
+                 factory-method="getRepository">
+            <argument type="string">Civix\CoreBundle\Entity\User</argument>
+        </service>
         <service id="civix_core.crop_image" class="Civix\CoreBundle\Service\CropImage">
         </service>
-        <service id="civix_core.mailgun" class="Civix\CoreBundle\Service\Mailgun\MailgunApi">
-            <argument>%mailgun_public%</argument>
+        <service class="Mailgun\Mailgun" id="mailgun.client">
             <argument>%mailgun_private%</argument>
-            <argument type="service" id="service_container" />
+            <argument>%mailgun_endpoint%</argument>
+            <argument>v3</argument>
+        </service>
+        <service class="Mailgun\Mailgun" id="mailgun.public_client">
+            <argument>%mailgun_public%</argument>
+            <argument>%mailgun_endpoint%</argument>
+            <argument>v3</argument>
+        </service>
+        <service id="civix_core.mailgun" class="Civix\CoreBundle\Service\Mailgun\MailgunApi">
+            <argument type="service" id="mailgun.client" />
+            <argument type="service" id="mailgun.public_client" />
+            <argument type="service" id="logger" />
+        </service>
+        <service class="Civix\CoreBundle\EventListener\GroupEventSubscriber" id="civix_core.event_listener.group_event_subscriber">
+            <argument id="civix_core.mailgun" type="service"/>
+            <argument id="civix_core.repository.user_repository" type="service"/>
+            <argument id="logger" type="service"/>
+            <tag name="kernel.event_subscriber"/>
         </service>
         <service id="civix_core.crop_avatar" class="Civix\CoreBundle\Service\CropAvatar">
             <argument type="service" id="civix_core.crop_image" />
@@ -38,7 +61,6 @@
         </service>
         <service id="civix_core.activity_update" class="Civix\CoreBundle\Service\ActivityUpdate">
             <argument type="service" id="doctrine.orm.entity_manager" />
-            <argument type="service" id="civix_core.push_task" />
             <argument type="service" id="validator" />
             <argument type="service" id="civix_core.settings" />
             <argument type="service" id="civix_core.poll.comment_manager" />
@@ -46,7 +68,6 @@
 
         <service id="civix_core.social_activity_manager" class="Civix\CoreBundle\Service\SocialActivityManager">
             <argument type="service" id="doctrine.orm.entity_manager" />
-            <argument type="service" id="civix_core.push_task" />
         </service>
 
         <service id="civix_core.cicero_calls" class="%ciceroapi_class%">
@@ -142,6 +163,7 @@
         <service id="civix_core.poll.micropetition_manager" class="Civix\CoreBundle\Service\Micropetitions\PetitionManager">
             <argument type="service" id="doctrine.orm.entity_manager" />
             <argument type="service" id="civix_core.activity_update" />
+            <argument type="service" id="event_dispatcher" />
         </service>
 
         <service id="civix_core.poll.answer_manager" class="Civix\CoreBundle\Service\Poll\AnswerManager">
@@ -318,6 +340,36 @@
         <service class="Civix\CoreBundle\Service\PhoneNumberNormalizer" id="civix_core.service.phone_number_normalizer">
             <argument id="libphonenumber.phone_number_util" type="service"/>
             <argument id="symfony.component.intl.resource.region" type="service"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\AnnouncementPushSenderListener" id="civix_core.event_listener.announcement_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\MicropetitionPushSenderListener" id="civix_core.event_listener.micropetition_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\PollPushSenderListener" id="civix_core.event_listener.poll_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\UserFollowPushSenderListener" id="civix_core.event_listener.user_follow_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\MicropetitionCommentPushSenderListener" id="civix_core.event_listener.micropetition_comment_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="doctrine.event_listener" event="postPersist"/>
+        </service>
+
+        <service class="Civix\CoreBundle\EventListener\SocialActivityPushSenderListener" id="civix_core.event_listener.social_activity_push_sender_listener">
+            <argument id="civix_core.push_task" type="service"/>
+            <tag name="doctrine.event_listener" event="postPersist"/>
         </service>
     </services>
 </container>

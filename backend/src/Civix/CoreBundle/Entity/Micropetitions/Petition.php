@@ -2,6 +2,7 @@
 
 namespace Civix\CoreBundle\Entity\Micropetitions;
 
+use Civix\CoreBundle\Entity\Activities\MicroPetition;
 use Civix\CoreBundle\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -209,12 +210,20 @@ class Petition
      */
     private $metadata;
 
+    /**
+     * @ORM\OneToMany(targetEntity="Civix\CoreBundle\Entity\Activities\MicroPetition", mappedBy="petition")
+     *
+     * @var ArrayCollection|MicroPetition
+     */
+    private $micropetitions;
+
     public function __construct()
     {
         $this->answers = new ArrayCollection();
         $this->hashTags = new ArrayCollection();
         $this->comments = new ArrayCollection();
         $this->metadata = new Metadata();
+        $this->micropetitions = new ArrayCollection();
     }
 
     /**
@@ -734,5 +743,13 @@ class Petition
     public function getMetadata()
     {
         return $this->metadata;
+    }
+
+    /**
+     * @return MicroPetition|ArrayCollection
+     */
+    public function getMicropetitions()
+    {
+        return $this->micropetitions;
     }
 }

@@ -8,21 +8,36 @@ class Metadata
     /**
      * @var string
      * @Serializer\Expose()
-     * @Serializer\Groups({"api-petitions-list", "api-petitions-info", "api-leader-micropetition"})
+     * @Serializer\Groups({
+     *     "api-petitions-list",
+     *     "api-petitions-info",
+     *     "api-leader-micropetition",
+     *     "api-activities"
+     * })
      */
     private $title;
 
     /**
      * @var string
      * @Serializer\Expose()
-     * @Serializer\Groups({"api-petitions-list", "api-petitions-info", "api-leader-micropetition"})
+     * @Serializer\Groups({
+     *     "api-petitions-list",
+     *     "api-petitions-info",
+     *     "api-leader-micropetition",
+     *     "api-activities"
+     * })
      */
     private $description;
 
     /**
      * @var string
      * @Serializer\Expose()
-     * @Serializer\Groups({"api-petitions-list", "api-petitions-info", "api-leader-micropetition"})
+     * @Serializer\Groups({
+     *     "api-petitions-list",
+     *     "api-petitions-info",
+     *     "api-leader-micropetition",
+     *     "api-activities"
+     * })
      */
     private $image;
 

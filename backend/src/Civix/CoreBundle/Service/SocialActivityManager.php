@@ -25,15 +25,9 @@ class SocialActivityManager
      */
     private $em;
 
-    /**
-     * @var PushTask
-     */
-    private $pt;
-
-    public function __construct(EntityManager $em, PushTask $pt)
+    public function __construct(EntityManager $em)
     {
         $this->em = $em;
-        $this->pt = $pt;
     }
 
     public function sendUserFollowRequest(UserFollow $follow)
@@ -44,8 +38,6 @@ class SocialActivityManager
         ;
         $this->em->persist($socialActivity);
         $this->em->flush($socialActivity);
-        $this->pt
-            ->addToQueue('sendInfluencePush', array($follow->getUser()->getId(), $follow->getFollower()->getId()));
 
         return $socialActivity;
     }
@@ -58,7 +50,6 @@ class SocialActivityManager
         ;
         $this->em->persist($socialActivity);
         $this->em->flush($socialActivity);
-        $this->pt->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
 
         return $socialActivity;
     }
@@ -76,7 +67,6 @@ class SocialActivityManager
         ;
         $this->em->persist($socialActivity);
         $this->em->flush($socialActivity);
-        $this->pt->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
 
         return $socialActivity;
     }
@@ -136,7 +126,6 @@ class SocialActivityManager
             ;
             $this->em->persist($socialActivity2);
             $this->em->flush($socialActivity2);
-            $this->pt->addToQueue('sendSocialActivity', [$socialActivity2->getId()]);
         }
     }
 
@@ -178,10 +167,8 @@ class SocialActivityManager
                 ->setRecipient($micropetition->getUser())
             ;
             $this->em->persist($socialActivity3);
-            $this->pt->addToQueue('sendSocialActivity', [$socialActivity3->getId()]);
         }
         $this->em->flush();
-        $this->pt->addToQueue('sendPostCommentedPush', [$comment->getId()]);
     }
 
     public function noticeGroupsPermissionsChanged(Group $group)
@@ -198,7 +185,6 @@ class SocialActivityManager
             ;
             $this->em->persist($socialActivity);
             $this->em->flush($socialActivity);
-            $this->pt->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
         }
     }
 
@@ -243,7 +229,6 @@ class SocialActivityManager
                 ;
                 $this->em->persist($socialActivity);
                 $this->em->flush($socialActivity);
-                $this->pt->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
             } elseif ($this->em->getRepository(UserFollow::class)->findActiveFollower($user, $recipient)) {
                 $socialActivity = (new SocialActivity(SocialActivity::TYPE_COMMENT_MENTIONED, $user, null))
                     ->setTarget($target)
@@ -251,7 +236,6 @@ class SocialActivityManager
                 ;
                 $this->em->persist($socialActivity);
                 $this->em->flush($socialActivity);
-                $this->pt->addToQueue('sendSocialActivity', [$socialActivity->getId()]);
             }
         }
     }
